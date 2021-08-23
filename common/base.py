@@ -18,7 +18,7 @@ file_handler = logging.FileHandler(log_path)
 file_handler.setFormatter(formatter)
 logger.addHandler(file_handler)
 
-log = lambda input_:logger.info(str(input_))
+log = lambda input_: logger.info(str(input_))
 
 
 class Base:
@@ -33,7 +33,6 @@ class Base:
         except:
             self.get_screen_shot()
             log(f'Can not find {args} element')
-            return False
 
     def find_id(self, args):
         try:
@@ -56,7 +55,9 @@ class Base:
         time_ = time.strftime('%Y-%m-%d %H:%M:%S')
         time_string = ''
         for str_ in time_:
-            if str_ == ' ' or str_ == '-' or str_ == ':':
+            # if str_ == ' ' or str_ == '-' or str_ == ':':
+            #     continue
+            if str_ in (' ', '-', ':'):
                 continue
             else:
                 time_string += str_
@@ -71,4 +72,429 @@ class Base:
         )
 
 
+class Ims:
+    import requests
 
+    s = requests.session()
+
+    def __init__(self, env='stg'):
+        base = f'https://ae-boapi.{env}devops.site/ae-ims/api/v1/'
+
+        self.login = base + 'login'
+        self.paymentInfo = base + 'deposits/setting/paymentInfoTemplate'
+        self.deposit_audit = base + 'deposits/search'
+
+    @allure.step('IMS 登入')
+    def ims_login(self):
+        url = self.login
+
+        username = 'wellytest'
+        pwd = 'dc18f76e9b59a3f84eb453cba8c2749d3e6b1eeb'
+
+        headers = {
+            'Connection': 'keep-alive',
+            'Content-Type': 'application/json;charset=UTF-8',
+        }
+
+        data = {
+            "userid": username,
+            "password": pwd
+        }
+
+        r = self.s.post(url, headers=headers, json=data, verify=False)
+        log(f'\nStatus: {r.status_code}, Admin: {username}\nIms login: {r.json()}')
+        return r.status_code, r.json()
+
+    def get_payment_info(self, token):
+        url = self.paymentInfo
+        headers = {
+            'accept-encoding': 'accept-encoding: gzip, deflate, br',
+            'authorization': token
+        }
+
+        r = self.s.get(url, headers=headers)
+
+    @allure.step('IMS 設定存款相關設定')
+    def set_up_payment_settings(self):
+        """
+        payload 裡的 templates 目前提供的是 線下入款, 必填的只有"存款人姓名"跟"轉出銀行",
+        調適完確定了上傳截圖再去抓都開的 api
+        """
+        _, token = self.ims_login()
+
+        url = self.paymentInfo + '/21906902-493c-4ff6-a6dd-f8430028f5e7'
+        headers = {
+            'content-type': 'application/json;charset=UTF-8',
+            'accept-encoding': 'accept-encoding: gzip, deflate, br',
+            'authorization': token['token']
+        }
+        payload = {
+            "templates": [
+                {
+                    "parameterId": "65206de3-8aaf-469f-9750-fce6bc3df8a3",
+                    "parameterName": {
+                        "en-US": "Beneficiary Name",
+                        "hi-IN": "QA-लाभार्थी का नाम",
+                        "id-ID": "QA-Nama Penerima",
+                        "ja-JP": "QA-受取人名",
+                        "ms-MY": "QA-Beneficiary Name",
+                        "pt-BR": "QA-Nome do beneficiado",
+                        "th-TH": "QA-ชื่อผู้รับโอน",
+                        "vi-VN": "QA-Chủ tài khoản",
+                        "zh-CN": "收款姓名",
+                        "zh-TW": "收款姓名"
+                    },
+                    "ecEnable": True,
+                    "parameterRequired": True,
+                    "parameterTips": None,
+                    "otherSetting": None
+                },
+                {
+                    "parameterId": "d8397e6b-f1dd-4383-8dd2-c0f855051042",
+                    "parameterName": {
+                        "en-US": "Bank Account",
+                        "hi-IN": "QA-बैंक खाता",
+                        "id-ID": "QA-Akun bank",
+                        "ja-JP": "QA-銀行口座",
+                        "ms-MY": "QA-Bank Account",
+                        "pt-BR": "QA-Número do cartão bancário",
+                        "th-TH": "QA-เลขบัญชีธนาคาร",
+                        "vi-VN": "QA-Số tài khoản",
+                        "zh-CN": "收款卡号",
+                        "zh-TW": "收款卡號"
+                    },
+                    "ecEnable": True,
+                    "parameterRequired": True,
+                    "parameterTips": None,
+                    "otherSetting": None
+                },
+                {
+                    "parameterId": "63075d89-4284-44e8-937b-ddff782a276a",
+                    "parameterName": {
+                        "en-US": "Branch",
+                        "hi-IN": "QA-ब्रांच",
+                        "id-ID": "QA-Cabang",
+                        "ja-JP": "QA-支店",
+                        "ms-MY": "QA-Branch",
+                        "pt-BR": "QA-Nome da agencia",
+                        "th-TH": "QA-ชื่อสาขา",
+                        "vi-VN": "QA-Chi nhánh",
+                        "zh-CN": "支行",
+                        "zh-TW": "支行"
+                    },
+                    "ecEnable": True,
+                    "parameterRequired": True,
+                    "parameterTips": None,
+                    "otherSetting": None
+                },
+                {
+                    "parameterId": "4d139ea8-d593-4ec5-b8b9-6cf1e815f8ab",
+                    "parameterName": {
+                        "en-US": "IFSC Code",
+                        "hi-IN": "QA-IFSC Code",
+                        "id-ID": "QA-IFSC Code",
+                        "ja-JP": "QA-IFSC Code",
+                        "ms-MY": "QA-IFSC Code",
+                        "pt-BR": "QA-IFSC Code",
+                        "th-TH": "QA-IFSC Code",
+                        "vi-VN": "QA-IFSC Code",
+                        "zh-CN": "IFSC Code",
+                        "zh-TW": "IFSC Code"
+                    },
+                    "ecEnable": True,
+                    "parameterRequired": False,
+                    "parameterTips": None,
+                    "otherSetting": None
+                },
+                {
+                    "parameterId": "3b6c24a0-f4c5-42d8-9a82-5ff5a851f31c",
+                    "parameterName": {
+                        "en-US": "Postscript",
+                        "hi-IN": "QA-परिशिष्ट भाग",
+                        "id-ID": "QA-Postscript",
+                        "ja-JP": "QA-追記",
+                        "ms-MY": "QA-Postscript",
+                        "pt-BR": "QA-observação",
+                        "th-TH": "QA-คำลงท้าย",
+                        "vi-VN": "QA-Nội Dung Chuyển tiền",
+                        "zh-CN": "附言",
+                        "zh-TW": "附言"
+                    },
+                    "ecEnable": True,
+                    "parameterRequired": True,
+                    "parameterTips": {
+                        "en-US": "Please enter the postscript in the bank transfer remark field",
+                        "hi-IN": "QA-வங்கி பரிமாற்ற கருத்து புலத்தில் தபால் பதிவை உள்ளிடவும்",
+                        "id-ID": "QA-Silahkan masukkan postscript di kolom komentar transfer bank",
+                        "ja-JP": "QA-銀行振込の備考欄に追記を入力してください。",
+                        "ms-MY": "QA-Sila masukkan nota-nota dalam bidang pernyataan pemindahan bank",
+                        "pt-BR": "QA-Certifique-se de colar a anotação acima no campo de comentários / observação",
+                        "th-TH": "QA-โปรดใส่คำลงท้ายลงบนช่องหมายเหตุการโอนเงินธนาคาร",
+                        "vi-VN": "QA-Yêu Cầu Nhập Đúng Ghi Chú Này Trong Nội Dung Chuyển Khoản Ngân Hàng",
+                        "zh-CN": "请务必在备注/附言等处贴上以上附言",
+                        "zh-TW": "QA-請務必在備註/附言等處貼上以上附言"
+                    },
+                    "otherSetting": {
+                        "postscriptRule": "PLAYER_ID_ORIGINAL"
+                    }
+                },
+                {
+                    "parameterId": "23095923-c372-4732-9128-d037d32bbf49",
+                    "parameterName": {
+                        "en-US": "Deposit Method",
+                        "hi-IN": "QA-जमा प्रकार",
+                        "id-ID": "QA-Tipe Deposit",
+                        "ja-JP": "QA-入金タイプ",
+                        "ms-MY": "QA-Deposit Method",
+                        "pt-BR": "QA-forma de depósito",
+                        "th-TH": "QA-วิธีการฝากเงิน",
+                        "vi-VN": "QA-Phương thức nạp",
+                        "zh-CN": "存款方式",
+                        "zh-TW": "存款方式"
+                    },
+                    "ecEnable": True,
+                    "parameterRequired": True,
+                    "parameterTips": None,
+                    "otherSetting": None
+                },
+                {
+                    "parameterId": "0b524f22-02ce-4e7d-abea-ebb2dbb9b3ee",
+                    "parameterName": {
+                        "en-US": "Amount",
+                        "hi-IN": "QA-Amount",
+                        "id-ID": "QA-Jumlah",
+                        "ja-JP": "QA-額",
+                        "ms-MY": "QA-Amount",
+                        "pt-BR": "QA-Valor do depósito",
+                        "th-TH": "QA-จำนวนเงินที่ฝาก",
+                        "vi-VN": "QA-Nhập số tiền",
+                        "zh-CN": "存款金额",
+                        "zh-TW": "存款金額"
+                    },
+                    "ecEnable": True,
+                    "parameterRequired": True,
+                    "parameterTips": None,
+                    "otherSetting": None
+                },
+                {
+                    "parameterId": "d9507b7f-9463-41fb-9d3a-5e1e4a006cd1",
+                    "parameterName": {
+                        "en-US": "Deposit Time",
+                        "hi-IN": "QA-जमा समय",
+                        "id-ID": "QA-Waktu Deposit",
+                        "ja-JP": "QA-入金時間",
+                        "ms-MY": "QA-Deposit Time",
+                        "pt-BR": "QA-Horário do depósito",
+                        "th-TH": "QA-เวลาฝากเงิน",
+                        "vi-VN": "QA-Thời gian gửi",
+                        "zh-CN": "存款时间",
+                        "zh-TW": "存款時間"
+                    },
+                    "ecEnable": True,
+                    "parameterRequired": True,
+                    "parameterTips": None,
+                    "otherSetting": None
+                },
+                {
+                    "parameterId": "07643418-c1eb-442a-b852-0f088f46015b",
+                    "parameterName": {
+                        "en-US": "Depositor Name",
+                        "hi-IN": "QA-जमाकर्ता का नाम",
+                        "id-ID": "QA-Nama Deposit",
+                        "ja-JP": "QA-入金者名",
+                        "ms-MY": "QA-Depositor Name",
+                        "pt-BR": "QA-Nome do depositante",
+                        "th-TH": "QA-ชื่อของผู้ฝากเงิน",
+                        "vi-VN": "QA-Họ tên người gửi",
+                        "zh-CN": "存款人姓名",
+                        "zh-TW": "存款人姓名"
+                    },
+                    "ecEnable": True,
+                    "parameterRequired": True,
+                    "parameterTips": {
+                        "en-US": "",
+                        "hi-IN": "",
+                        "id-ID": "",
+                        "ja-JP": "",
+                        "ms-MY": "",
+                        "pt-BR": "",
+                        "th-TH": "",
+                        "vi-VN": "Tiếng Việt Tiếng Việt",
+                        "zh-CN": "QA-depositName簡體中文",
+                        "zh-TW": ""
+                    },
+                    "otherSetting": None
+                },
+                {
+                    "parameterId": "a1c8b3ae-789b-4883-a0d8-e1722bdc843b",
+                    "parameterName": {
+                        "en-US": "Transfer from",
+                        "hi-IN": "QA-Transfer from",
+                        "id-ID": "QA-Transfer Dari",
+                        "ja-JP": "QA-送金元",
+                        "ms-MY": "QA-Transfer from",
+                        "pt-BR": "QA-banco de origem",
+                        "th-TH": "QA-โอนจากธนาคาร",
+                        "vi-VN": "QA-Ngân hàng chuyển",
+                        "zh-CN": "转出银行",
+                        "zh-TW": "轉出銀行"
+                    },
+                    "ecEnable": True,
+                    "parameterRequired": True,
+                    "parameterTips": {
+                        "en-US": "Please select",
+                        "hi-IN": "QA-कृपया चुनें।",
+                        "id-ID": "QA-Silahkan pilih",
+                        "ja-JP": "QA-選択してください",
+                        "ms-MY": "QA-Sila pilih",
+                        "pt-BR": "QA-favor selecione",
+                        "th-TH": "QA-โปรดเลือก",
+                        "vi-VN": "QA-Chọn ngân hàng",
+                        "zh-CN": "请选择",
+                        "zh-TW": "QA-請選擇"
+                    },
+                    "otherSetting": None
+                },
+                {
+                    "parameterId": "9d39ad85-628f-49f4-aa3e-74d401771bef",
+                    "parameterName": {
+                        "en-US": "Remarks",
+                        "hi-IN": "QA-Remarks",
+                        "id-ID": "QA-Remarks",
+                        "ja-JP": "QA-Remarks",
+                        "ms-MY": "QA-Remarks",
+                        "pt-BR": "QA-Remarks",
+                        "th-TH": "QA-ข้อสังเกต",
+                        "vi-VN": "QA-Nhận xét",
+                        "zh-CN": "存款备注",
+                        "zh-TW": "存款備註"
+                    },
+                    "ecEnable": True,
+                    "parameterRequired": False,
+                    "parameterTips": {
+                        "en-US": "",
+                        "hi-IN": "",
+                        "id-ID": "",
+                        "ja-JP": "",
+                        "ms-MY": "",
+                        "pt-BR": "",
+                        "th-TH": "",
+                        "vi-VN": "",
+                        "zh-CN": "QA-remarks簡體中文",
+                        "zh-TW": ""
+                    },
+                    "otherSetting": None
+                },
+                {
+                    "parameterId": "9cae777a-ad76-4fe0-8b79-6ba3a4633350",
+                    "parameterName": {
+                        "en-US": "Upload Deposit Proof",
+                        "hi-IN": "QA-भुगतान अपलोड करें",
+                        "id-ID": "QA-Unduh Struk Pembayaran",
+                        "ja-JP": "QA-領収書の写真",
+                        "ms-MY": "QA-Upload Deposit Proof",
+                        "pt-BR": "QA-Carregar captura de tela",
+                        "th-TH": "QA-อัพโหลดสลิปการโอน",
+                        "vi-VN": "QA-Tải hóa đơn",
+                        "zh-CN": "上传截图",
+                        "zh-TW": "上傳截圖"
+                    },
+                    "ecEnable": True,
+                    "parameterRequired": False,
+                    "parameterTips": None,
+                    "otherSetting": None
+                },
+                {
+                    "parameterId": "bfdb27e8-8e44-4220-86af-fa6147872d2c",
+                    "parameterName": {
+                        "en-US": "Reminder",
+                        "hi-IN": "Reminder",
+                        "id-ID": "Reminder",
+                        "ja-JP": "Reminder",
+                        "ms-MY": "Reminder",
+                        "pt-BR": "Reminder",
+                        "th-TH": "เตือนความจำ",
+                        "vi-VN": "Lưu ý",
+                        "zh-CN": "注意事项",
+                        "zh-TW": "bankId"
+                    },
+                    "ecEnable": True,
+                    "parameterRequired": True,
+                    "parameterTips": {
+                        "en-US": "Please enter your name correctly",
+                        "hi-IN": "",
+                        "id-ID": "",
+                        "ja-JP": "",
+                        "ms-MY": "",
+                        "pt-BR": "",
+                        "th-TH": "",
+                        "vi-VN": "",
+                        "zh-CN": "请提交至正确收款帐户，以加速入款时间",
+                        "zh-TW": ""
+                    },
+                    "otherSetting": None
+                }
+            ]
+        }
+
+        r = self.s.put(url, headers=headers, json=payload)
+
+        log(r.text)
+
+    @allure.step('存款審核搜尋')
+    def deposit_audit_search(self, playerid):
+        import time
+
+        month = time.strftime('%m')
+        day = time.strftime('%d')
+        todays_start, todays_end = self.start_and_end_time(
+            start_m=month,
+            start_d=day,
+            end_m=month,
+            end_d=day
+        )
+
+        _, token = self.ims_login()
+
+        url = self.deposit_audit
+        headers = {
+            'authorization': token['token']
+        }
+        params = {
+            'playerid': playerid,
+            'exactmatch': True,
+            'depositPaymentTypeEnum': 'COMPANY_DEPOSIT',
+            'endtime': todays_end,
+            'language': 2,
+            'limit': 25,
+            'offset': 0,
+            'sort': 'DESC',
+            'sortcolumn': 'deposittime',
+            'starttime': todays_start,
+            'statusType': 'DEPOSIT_AUDIT',
+            'timefilter': 'deposittime',
+        }
+        r = self.s.get(url, headers=headers, params=params)
+        log(r.text)
+        return r.json()
+
+    @allure.step('Get timestamp')
+    def start_and_end_time(
+            self, start_m,
+            start_d,
+            end_m,
+            end_d
+    ):
+        todays_start = ''
+        todays_end = ''
+        strftimes = (time.strftime('%Y') + f'-{start_m}-{start_d} 00:00:00',
+                     time.strftime('%Y') + f'-{end_m}-{end_d} 23:59:59')
+
+        for strftime in strftimes:
+            strptime = time.strptime(strftime, '%Y-%m-%d %H:%M:%S')
+            if strftime == strftimes[0]:
+                todays_start = time.mktime(strptime)
+            else:
+                todays_end = time.mktime(strptime)
+
+        return str(int(todays_start)) + '000', str(int(todays_end)) + '999'

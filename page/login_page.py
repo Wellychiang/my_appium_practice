@@ -4,6 +4,8 @@ import allure
 
 
 class LoginPage(base.Base):
+    banner_indicators =     '//*[@resource-id="com.stage.mpsy.stg:id/layoutIndicators"]'
+
     AE_logo =               '//*[@resource-id="com.stage.mpsy.stg:id/imgLogo"]'
 
     login_form =            '//*[@content-desc="登录"]'
@@ -31,6 +33,13 @@ class LoginPage(base.Base):
     def input_pwd(self, pwd):
         self.find_element(self.pwd).send_keys(pwd)
 
+    @allure.step('檢查錯誤訊息')
+    def check_error_msg(self, err_msg):
+        assert self.find_element(f'//*[contains(@text, "{err_msg}")]') is not None
+
+    def close_keyboard(self):
+        self.driver.hide_keyboard()
+
     @allure.step('點擊記住我')
     def click_remember_me(self):
         self.find_element(self.remeber_me).click()
@@ -45,7 +54,7 @@ class LoginPage(base.Base):
 
     @allure.step('跳過廣告進入登入頁面')
     def skip_ad_page(self):
-        sleep(5)
+        assert self.find_element(self.banner_indicators) is not False
         [self.slide(direction='swipe left') for i in range(4)]
         self.find_element(self.go_login_page_button).click()
 
@@ -60,3 +69,5 @@ class LoginPage(base.Base):
     @allure.step('點擊先去逛逛, 進入首頁')
     def click_go_browse(self):
         self.find_element(self.go_browse).click()
+
+
