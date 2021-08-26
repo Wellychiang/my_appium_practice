@@ -4,49 +4,36 @@ import allure
 import pytest
 
 
+data = [{'username': 'welly229', 'pwd': 'qwer1234', 'deposit_method': 'offline'}]
+
+
 @allure.feature('金流')
 @allure.story('線下入款')
+@pytest.mark.parametrize("driver", data, indirect=True)
 def test_offline_deposit(
         driver,
-        username='welly229',
-        pwd='qwer1234',
         bank_name='瑞士银行',
+        username=data[0]['username'],
         transfer_out_bank_name='平安银行',
         deposit_name='haha',
         amount=100,
         remarks='備註',
 ):
-    (login_page,
-     home_page,
+    (home_bottom_navigator_bar,
      deposit_page,
-     deposit_record_page,
-     home_bottom_navigator_bar,
-     deposit_method_choose,
-     deposit_receive_payment_bank,
-     deposit_bank_detail,
+     offline_deposit,
      deposit_choose_amount_page,
      deposit_success_page) = driver
 
-    ims.set_up_payment_settings()
 
-    login_page.login(account=username, pwd=pwd)
+    deposit_page.choose_pay_method(method='线下入款')
 
-    home_page.ignore_gift_if_it_show_up()
-    # TODO: 每日簽到的 skip
-    home_page.ignore_ads_if_ads_show_up()
-    home_page.click_deposit_button()
-    deposited = home_page.go_revoke_deposit_page_if_deposited()
-    if deposited is True:
-        deposit_record_page.revoke_deposit()
-        home_page.click_deposit_button()
+    offline_deposit.click_to_show_up_bank_list()
+    offline_deposit.click_to_choose_bank(bank_name=bank_name)
 
-    deposit_method_choose.choose_pay_method(method='线下入款')
-    deposit_receive_payment_bank.click_to_show_up_bank_list()
-    deposit_receive_payment_bank.click_to_choose_bank(bank_name=bank_name)
-
-    deposit_bank_detail.check_bank_name_when_its_chosen(bank_name=bank_name)
-    deposit_bank_detail.check_post_script(username=username)
-    deposit_bank_detail.click_next_step()
+    offline_deposit.check_bank_name_when_its_chosen(bank_name=bank_name)
+    offline_deposit.check_post_script(username=username)
+    offline_deposit.click_next_step()
 
     deposit_choose_amount_page.check_popup_warm_hint_and_click_confirm()
     deposit_choose_amount_page.input_name(deposit_name)
