@@ -45,7 +45,6 @@ class DepositPage(base.Base):
     def click_to_choose_bank(self, bank_name='成都银行'):
         self.find_element(f'//*[contains(@text, "{bank_name}")]').click()
 
-
     @allure.step('顯示已選的銀行')
     def check_bank_name_when_its_chosen(self, bank_name='成都银行'):
         assert self.find_element(f'//*[contains(@text, "{bank_name}")]') is not None
@@ -255,8 +254,6 @@ class NetbankDeposit(DepositPage):
     @allure.step('點擊收款銀行, 從底部彈出銀行清單')
     def click_to_show_up_receive_payment_bank_list(self):
         self.find_element(self.receive_payment_bank).click()
-
-
 
 
     @allure.step('選擇其他金額後(獲取收款帳號變成無法點擊), 並輸入想要的金額(輸入後獲取收款帳號可以點擊)')

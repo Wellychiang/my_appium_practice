@@ -28,11 +28,10 @@ class AccountPage(base.Base):
             'select_day_btn': '//*[@resource-id="com.stage.mpsy.stg:id/selectDate"]',
             'select_day':    ''
         }
-        content_layout = {
-            'trans_title':  '//*[@resource-id="com.stage.mpsy.stg:id/txtTransTitle"]',
-            'trans_status': '//*[@resource-id="com.stage.mpsy.stg:id/txtTransStatus"]',
-            'trans_amount': '//*[@resource-id="com.stage.mpsy.stg:id/txtTransAmount"]',
-        }
+        # content layout
+        trans_title = '//*[@resource-id="com.stage.mpsy.stg:id/txtTransTitle"]'
+        trans_status = '//*[@resource-id="com.stage.mpsy.stg:id/txtTransStatus"]'
+        trans_amount = '//*[@resource-id="com.stage.mpsy.stg:id/txtTransAmount"]'
 
 
         @allure.step('打開搜尋條件類型清單')
@@ -49,13 +48,13 @@ class AccountPage(base.Base):
 
         @allure.step('檢查充值單據第幾筆的狀態, 錢')
         def check_deposit_info(self, count, title, status, amount):
-            assert self.find_element(f"({self.content_layout['trans_title']})[{count}]").text == title
-            assert self.find_element(f"({self.content_layout['trans_status']})[{count}]").text == status
-            assert self.find_element(f"({self.content_layout['trans_amount']})[{count}]").text == str(amount) + '.00'
+            assert self.find_element(f"({self.trans_title})[{count}]").text == title
+            assert self.find_element(f"({self.trans_status})[{count}]").text == status
+            assert self.find_element(f"({self.trans_amount})[{count}]").text == str(amount) + '.00'
 
         @allure.step('點擊第幾筆選擇的單據, 進入交易詳情')
         def enter_to_deposit_detail(self, count):
-            self.find_element(f"({self.content_layout['trans_amount']})[{count}]").click()
+            self.find_element(f"({self.trans_amount})[{count}]").click()
 
 
         class TransactionDetail(base.Base):
