@@ -1,6 +1,7 @@
 from common import base
 
 import allure
+import pytest
 
 
 class DepositPage(base.Base):
@@ -11,8 +12,10 @@ class DepositPage(base.Base):
     # input info block
     name =                          '//*[@resource-id="com.stage.mpsy.stg:id/edtOther1"]'
     remark =                        '//*[@resource-id="com.stage.mpsy.stg:id/edtRemark"]'
-    amount_placeholder =            '//*[@resource-id="com.stage.mpsy.stg:id/textinput_placeholder"]'
+    amount_placeholder =            '//*[@resource-id="com.stage.mpsy.stg:id/edtCustomAmount"]'
     get_receive_payment_account =   '//*[contains(@text, "获取收款账号")]'
+    input_amount_hint =             '//*[@resource-id="com.stage.mpsy.stg:id/txtAmountTip"]'
+    another_amount =                '//*[contains(@text, "其它金额")]'
 
     # personal_deposit_info_check_page
     title =                         '//*[@resource-id="com.stage.mpsy.stg:id/topTitle"]'
@@ -25,8 +28,6 @@ class DepositPage(base.Base):
     allowed =                       '(//*[contains(@text, "允許")])[2]'
     my_picture =                    '//*[@resource-id="com.google.android.documentsui:id/icon_thumb"]'
     confirm_picture =               '//*[@resource-id="com.stage.mpsy.stg:id/menu_crop"]'
-
-
 
 
     @allure.step('點擊使用付款方式')
@@ -57,34 +58,52 @@ class DepositPage(base.Base):
     def input_remark(self, remark):
         self.find_element(self.remark).send_keys(remark)
 
+    @allure.step('點擊其他金額')
+    def click_another_amount(self):
+        self.find_element(self.another_amount).click()
+
     @allure.step('檢查獲取收款帳號可否點擊')
     def check_get_receive_payment_account_enabled_or_not(self, bool_: bool):
         if bool_ is True:
-            assert self.find_element(self.get_receive_payment_account) is not False
+            assert self.find_element(self.get_receive_payment_account).is_enabled() is not False
         else:
-            assert self.find_element(self.get_receive_payment_account) is False
+            assert self.find_element(self.get_receive_payment_account).is_enabled() is False
 
     @allure.step('輸入充值金額')
     def input_amount(self, amount):
         self.find_element(self.amount_placeholder).send_keys(amount)
 
+    @allure.step('檢查充值時輸入錯誤產生的紅字提示')
+    def check_red_hint_with_invalid_input(self, err_msg):
+        assert err_msg in self.find_element(self.input_amount_hint).text
+
     @allure.step('點擊獲取收款帳號')
     def click_get_receive_payment_account(self):
         self.find_element(self.get_receive_payment_account).click()
 
-    @allure.step('上傳圖片')
-    def upload_img(self):
+    @allure.step('點擊圖片, 跳出選擇圖庫或相片')
+    def click_image_btn(self):
         self.find_element(self.img_upload).click()
+
+    @allure.step('點擊從圖庫')
+    def click_from_picture_lib(self):
         self.find_element(self.from_picture_lib).click()
+
+    @allure.step('允許從 app 讀取圖庫')
+    def allowed_app_load_image(self):
         self.find_element(self.allowed).click()
 
-        self.find_element(self.img_upload).click()
-        self.find_element(self.from_picture_lib).click()
+    @allure.step('選擇圖庫裡第一張照片, 進入修改照片')
+    def choose_the_first_in_lib(self):
         self.find_element(self.my_picture).click()
+
+    @allure.step('點擊右上角勾勾, 確認上傳修改完圖片')
+    def upload_the_chosen_image(self):
         self.find_element(self.confirm_picture).click()
 
 
 class OfflineDeposit(DepositPage):
+    """線下轉帳的流程跟其他充值流程較不相同, 所以獨自寫一個"""
 
     bank_choose =   '//*[@resource-id="com.stage.mpsy.stg:id/transInBankTitleName"]'
     bank_list =     '//*[@resource-id="com.stage.mpsy.stg:id/design_bottom_sheet"]'
@@ -240,7 +259,7 @@ class NetbankDeposit(DepositPage):
     other_amount =          '//*[contains(@text, "其它金额")]'
     amount_placeholder =    '//*[@resource-id="com.stage.mpsy.stg:id/edtCustomAmount"]'
 
-    receive_payment_account = '//*[contains(@text, "获取收款金额")]'
+    receive_payment_account = '//*[contains(@text, "获取收款账号")]'
 
     @allure.step('點開轉出銀行的銀行選單')
     def click_to_show_up_transfer_out_bank_list(self):
@@ -264,7 +283,7 @@ class NetbankDeposit(DepositPage):
         self.find_element(self.amount_placeholder).send_keys(amount)
         self.check_get_receive_payment_account_is_enabled_or_not(bool_=True)
 
-    @allure.step('確定立即存款按鈕可否點擊')
+    @allure.step('確定獲取收款帳號按鈕可否點擊')
     def check_get_receive_payment_account_is_enabled_or_not(self, bool_):
         assert self.find_element(self.receive_payment_account).is_enabled() is bool_
 

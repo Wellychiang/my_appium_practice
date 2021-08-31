@@ -18,7 +18,7 @@ file_handler = logging.FileHandler(log_path)
 file_handler.setFormatter(formatter)
 logger.addHandler(file_handler)
 
-log = lambda input_: logger.info(str(input_))
+log = lambda x: logger.info(str(x).encode('utf-8', 'replace').decode('cp950', 'ignore'))
 
 
 class Base:
@@ -30,6 +30,14 @@ class Base:
         try:
             WebDriverWait(self.driver, 13).until(lambda driver: driver.find_element_by_xpath(args)).is_displayed()
             return self.driver.find_element_by_xpath(args)
+        except:
+            self.get_screen_shot()
+            log(f'Can not find {args} element')
+
+    def find_elements(self, args):
+        try:
+            WebDriverWait(self.driver, 13).until(lambda driver: driver.find_elements_by_xpath(args)).is_displayed()
+            return self.driver.find_elements_by_xpath(args)
         except:
             self.get_screen_shot()
             log(f'Can not find {args} element')
@@ -50,6 +58,12 @@ class Base:
             y1 = screen_size['height'] * 0.5
             x2 = screen_size['width'] * 0.25
             self.driver.swipe(x1, y1, x2, y1, time)
+        elif direction == 'swipe up':
+            x1 = screen_size['width'] * 0.5
+            y1 = screen_size['height'] * 0.75
+            y2 = screen_size['height'] * 0.25
+            self.driver.swipe(x1, y1, x1, y2, time)
+            print('sliddddd')
 
     def get_screen_shot(self):
         time_ = time.strftime('%Y-%m-%d %H:%M:%S')
@@ -82,9 +96,10 @@ class Ims:
     def __init__(self, env='stg'):
         self.base = f'https://ae-boapi.{env}devops.site/ae-ims/api/v1/'
 
-        self.login = self.base + 'login'
-        self.paymentInfo = self.base + 'deposits/setting/paymentInfoTemplate'
-        self.deposit_audit = self.base + 'deposits/search'
+        self.login =            self.base + 'login'
+        self.paymentInfo =      self.base + 'deposits/setting/paymentInfoTemplate'
+        self.deposit_audit =    self.base + 'deposits/search'
+        self.player_payments =  self.base + 'playerpayments'
 
     @allure.step('IMS 登入')
     def ims_login(self):
@@ -910,6 +925,7 @@ class Ims:
                     }
                 ]
             }
+
         _, token = self.ims_login()
 
         url = self.paymentInfo + f'/{method_id}'
@@ -995,6 +1011,39 @@ class Ims:
         r = self.s.put(url, headers=headers, json=payload)
         log(f'Deposit data approve: {r.status_code}')
         return r.status_code
+
+    @allure.step('IMS 查詢玩家銀行卡並刪除')
+    def bankcard(self, playerid, limit=10, delete=False, payment_id=None):
+        _, token = self.ims_login()
+
+        headers = {
+            # 'content-type': 'application/json;charset=UTF-8',
+            'authorization': token['token']
+        }
+        params = {
+            'playerid': playerid,
+            'limit': limit,
+            'sortcolumn': 'createdate',
+            'sort': 'DESC',
+            'language': 2
+        }
+
+        if delete is True:
+            url = self.player_payments + f'/{payment_id}'
+            r = self.s.delete(url, headers=headers)
+            log(f'Bankcard delete: {r.status_code}')
+
+            if r.status_code != 204:
+                raise ValueError('Delete bankcard failed')
+
+        else:
+            url = self.player_payments
+            r = self.s.get(url, headers=headers, params=params)
+
+            log(f'Bankcard: {r.text}')
+            # {'total' 3, 'data': [{'paymentid': 'asodiahwo', 'bankaccount': 111222},
+            #                       {'paymentid'}, {}]}
+            return r.json()
 
     @allure.step('Get timestamp')
     def start_and_end_time(

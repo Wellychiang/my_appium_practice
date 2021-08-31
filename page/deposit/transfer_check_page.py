@@ -5,7 +5,7 @@ import pytest
 import time
 
 
-class PersonalAccountTransferCheck(base.Base):
+class TransferCheckPage(base.Base):
     title =                 '//*[@resource-id="com.stage.mpsy.stg:id/topTitle"]'
     name =                  '//*[@resource-id="com.stage.mpsy.stg:id/txtAccount"]'
     amount =                '//*[@resource-id="com.stage.mpsy.stg:id/txtAmount"]'
@@ -34,10 +34,11 @@ class PersonalAccountTransferCheck(base.Base):
             deposit_amount,
             name
     ):
-        assert f'{transfer_method} 个人号转账' in self.find_element(self.title).text
+        # assert f'{transfer_method} 个人号转账' in self.find_element(self.title).text
         assert self.find_element(self.name).text == deposit_name
         assert int(float(self.find_element(self.amount).text)) == deposit_amount
-        assert name.upper() in self.find_element(self.post_script).text
+        print(self.find_element(self.post_script).text)
+        assert name[:4].upper() in self.find_element(self.post_script).text
 
     @allure.step('檢查複製文字功能')
     def check_copy_function(self):
@@ -50,18 +51,26 @@ class PersonalAccountTransferCheck(base.Base):
         self.find_element(self.copy_post_script).click()
         assert self.find_element(self.copy_success) is not False
 
-
-    @allure.step('上傳圖片')
-    def upload_img(self):
+    @allure.step('點擊圖片, 跳出選擇圖庫或相片')
+    def click_image_btn(self):
         self.find_element(self.img_upload).click()
+
+    @allure.step('點擊從圖庫')
+    def click_from_picture_lib(self):
         self.find_element(self.from_picture_lib).click()
+
+    @allure.step('允許從 app 讀取圖庫')
+    def allowed_app_load_image(self):
         self.find_element(self.allowed).click()
 
-        self.find_element(self.img_upload).click()
-        self.find_element(self.from_picture_lib).click()
+    @allure.step('選擇圖庫裡第一張照片, 進入修改照片')
+    def choose_the_first_in_lib(self):
         self.find_element(self.my_picture).click()
+
+    @allure.step('點擊右上角勾勾, 確認上傳修改完圖片')
+    def upload_the_chosen_image(self):
         self.find_element(self.confirm_picture).click()
 
     @allure.step('點擊我已成功轉賬')
-    def click_deposit_confirm(self):
+    def click_transfer_success(self):
         self.find_element(self.deposit_confirm).click()

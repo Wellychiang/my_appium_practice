@@ -4,6 +4,7 @@ import allure
 
 
 class LoginPage(base.Base):
+    cancel_update_hint =    '//*[contains(@text, "取消")]'
     banner_indicators =     '//*[@resource-id="com.stage.mpsy.stg:id/layoutIndicators"]'
 
     AE_logo =               '//*[@resource-id="com.stage.mpsy.stg:id/imgLogo"]'
@@ -20,6 +21,7 @@ class LoginPage(base.Base):
     go_browse =             '//*[@resource-id="com.stage.mpsy.stg:id/txtGoBrowse"]'
 
     def login(self, account, pwd):
+        self.cancel_the_hint_with_new_version()
         self.skip_ad_page()
         self.input_username(account)
         self.input_pwd(pwd)
@@ -52,7 +54,12 @@ class LoginPage(base.Base):
     def click_login_button(self):
         self.find_element(self.login_button).click()
 
-    @allure.step('跳過廣告進入登入頁面')
+    @allure.step('若有新版本提示, 取消他')
+    def cancel_the_hint_with_new_version(self):
+        if self.find_element(self.cancel_update_hint):
+            self.find_element(self.cancel_update_hint).click()
+
+    @allure.step('跳過滑動廣告, 進入登入頁面')
     def skip_ad_page(self):
         assert self.find_element(self.banner_indicators) is not False
         [self.slide(direction='swipe left') for i in range(4)]

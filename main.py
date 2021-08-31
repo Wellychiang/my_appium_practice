@@ -10,7 +10,7 @@ if __name__ == '__main__':
     if str(sys.argv[1]) == 'features' or str(sys.argv[1]) == 'stories':
         pytest.main([
             '-vvs',
-            '--reruns', '1',
+            # '--reruns', '1',
             f'--allure-{str(sys.argv[1])}',
             str(sys.argv[2]),
             '--alluredir', 'report'

@@ -26,15 +26,16 @@ class DepositSuccessPage(base.Base):
             amount,
             deposit_name,
             receive_payment_bank,
-            transfer_out_bank
+            # transfer_out_bank
     ):
         """
         參數由使用這個方法的一方提供
         """
+
         assert int(float(self.find_element(self.amount).text)) == int(amount)
         assert self.find_element(self.deposit_name).text == deposit_name
         assert receive_payment_bank in self.find_element(self.receive_payment_bank).text
-        assert self.find_element(self.deposit_bank).text == transfer_out_bank
+        # assert self.find_element(self.deposit_bank).text == transfer_out_bank
 
         return self.find_element(self.deposit_id).text
 

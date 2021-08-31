@@ -3,24 +3,41 @@ from common.base import log
 
 from page.login_page import LoginPage
 from page.home_page import HomePage
-from page.account_page import AccountPage
-from page.deposit.deposit_page import DepositPage, OfflineDeposit, NetbankDeposit, NetellerDeposit
-from page.deposit.deposit_success_page import DepositSuccessPage
-from page.deposit.personal_account_transfer_check import PersonalAccountTransferCheck
+
 
 from page.deposit_record_page import DepositRecordPage
 
 from testcase import ims
 
 import pytest
+import allure
+
+
+@allure.step('初始化充值頁面, 已充值帳號')
+def setup_settings(playerid):
+    deposit_methods = ('offline', 'netbank')
+
+    log(f'\n{"-"*8}Setup settings{"-"*8}')
+
+    for deposit_method in deposit_methods:
+        ims.set_up_deposit_page_settings(deposit_method=deposit_method)
+
+    deposit_audit_search = ims.deposit_audit_search(playerid=playerid)
+    if deposit_audit_search['total'] != 0 and len(deposit_audit_search['data']) != 0:
+        deposit_id = deposit_audit_search['data'][0]['depositid']
+        unlock_status = ims.deposit_data_lock_or_not(deposit_id=deposit_id, status='unlock')
+        approve_status = ims.deposit_data_approve(deposit_id=deposit_id, ec_remarks='setup')
+        if str(unlock_status) != '204' or str(approve_status) != '204':
+            raise ValueError(f'IMS unlock status: {unlock_status}\tIMS approve status: {approve_status}')
+
+    log(f'\n{"-"*8}Settings done{"-"*8}')
 
 
 @pytest.fixture()
 def driver(request):
-    log(f'\n{"*"*8}Start app{"*"*8}')
-
-    # param = request.param
-    # ims.set_up_deposit_page_settings(deposit_method=param['deposit_method'])
+    log(f'\n{"-"*8}Start app{"-"*8}')
+    param = request.param
+    setup_settings(playerid=param['username'])
     caps = {
         "appActivity": "com.entertainment.mps_yabo.LandingActivity",
         "appPackage": "com.stage.mpsy.stg",
@@ -30,65 +47,38 @@ def driver(request):
         "isHeadless": "true",
     }
     driver = webdriver.Remote("http://localhost:4723/wd/hub", caps)
-    yield driver
 
-    # login_page =                    LoginPage(driver)
-    # home_page =                     HomePage(driver)
-    # deposit_page =                  DepositPage(driver)
-    # deposit_record_page =           DepositRecordPage(driver)
-    #
-    # home_bottom_navigator_bar =     home_page.BottomNavigatorBar(driver)
-    # offline_deposit =               OfflineDeposit(driver)
-    # deposit_choose_amount_page =    OfflineDeposit(driver).ChooseAmountPage(driver)
-    # deposit_success_page =          DepositSuccessPage(driver)
-    # personal_account_transfer_check = PersonalAccountTransferCheck(driver)
-    #
-    # netbank_deposit =               NetbankDeposit(driver)
-    # neteller_deposit =              NetellerDeposit(driver)
-    #
-    #
-    # login_page.login(account=param['username'], pwd=param['pwd'])
-    #
-    # home_page.ignore_gift_if_it_show_up()
-    # # TODO: 每日簽到的 skip
-    # home_page.ignore_ads_if_ads_show_up()
-    # home_page.click_deposit_button()
-    # deposited = home_page.go_revoke_deposit_page_if_deposited()
-    # if deposited is True:
-    #     deposit_record_page.revoke_deposit()
-    #
-    # init_methods = []
-    # if param['deposit_method'] == 'offline':
-    #     init_methods.extend([
-    #         home_bottom_navigator_bar,
-    #         deposit_page,
-    #         offline_deposit,
-    #         deposit_choose_amount_page,
-    #         deposit_success_page
-    #     ])
-    # elif param['deposit_method'] == 'Neteller':
-    #     init_methods.extend([
-    #         deposit_page,
-    #         neteller_deposit
-    #     ])
-    # elif param['deposit_method'] == 'netbank':
-    #     init_methods.extend([deposit_page, netbank_deposit])
-    # else:
-    #     pass
-    #
-    # yield init_methods
-    #
-    # home_page.click_deposit_button()
-    # deposited = home_page.go_revoke_deposit_page_if_deposited()
-    # if deposited is True:
-    #     deposit_record_page.revoke_deposit()
+    login_page =                    LoginPage(driver)
+    home_page =                     HomePage(driver)
 
-    driver.quit()
-    log(f'{"*"*8}Close app{"*"*8}')
+    deposit_record_page =           DepositRecordPage(driver)
+
+    try:
+        login_page.login(account=param['username'], pwd=param['pwd'])
+
+        home_page.ignore_gift_if_it_show_up()
+        # TODO: 每日簽到的 skip
+        home_page.ignore_ads_if_ads_show_up()
+        home_page.click_deposit_button()
+
+        yield driver
+
+    except Exception as e:
+        raise ValueError(str(e))
+    finally:
+        driver.quit()
+        deposit_audit_search = ims.deposit_audit_search(playerid=param['username'])
+        if deposit_audit_search['total'] != 0 and len(deposit_audit_search['data']) != 0:
+            deposit_id = deposit_audit_search['data'][0]['depositid']
+            unlock_status = ims.deposit_data_lock_or_not(deposit_id=deposit_id, status='unlock')
+            approve_status = ims.deposit_data_approve(deposit_id=deposit_id, ec_remarks='setup')
+            if str(unlock_status) != '204' or str(approve_status) != '204':
+                raise ValueError(f'IMS unlock status: {unlock_status}\tIMS approve status: {approve_status}')
+        log(f'{"-"*8}Close app{"-"*8}')
 
 
 @pytest.fixture()
-def driver_with_audit_related(request):
+def driver_with_deposit_revoke_or_audit(request):
     """ for test_APP-137, 138"""
 
     log(f'\n{"*" * 8}Start app{"*" * 8}')
@@ -104,23 +94,10 @@ def driver_with_audit_related(request):
         "isHeadless": "true",
     }
     driver = webdriver.Remote("http://localhost:4723/wd/hub", caps)
-
     login_page =                 LoginPage(driver)
     home_page =                  HomePage(driver)
-    home_bottom_navigator_bar =  home_page.BottomNavigatorBar(driver)
 
-    deposit_page =                  DepositPage(driver)
-    offline_deposit =               OfflineDeposit(driver)
-    netbank_deposit =               NetbankDeposit(driver)
-    deposit_choose_amount_page =    OfflineDeposit(driver).ChooseAmountPage(driver)
-    deposit_success_page =          DepositSuccessPage(driver)
-    personal_account_transfer_check = PersonalAccountTransferCheck(driver)
-    deposit_record_page =           DepositRecordPage(driver)
-
-    account_page =       AccountPage(driver)
-    finance_record =     account_page.FinanceRecord(driver)
-    transaction_detail = finance_record.TransactionDetail(driver)
-
+    deposit_record_page =        DepositRecordPage(driver)
 
     login_page.login(account=param['username'], pwd=param['pwd'])
 
@@ -132,20 +109,7 @@ def driver_with_audit_related(request):
     if deposited is True:
         deposit_record_page.revoke_deposit()
 
-    yield (
-        login_page,
-        home_page,
-        home_bottom_navigator_bar,
-        deposit_page,
-        deposit_record_page,
-        offline_deposit,
-        deposit_choose_amount_page,
-        deposit_success_page,
-        account_page,
-        finance_record,
-        transaction_detail
-    )
-
+    yield driver
 
     driver.quit()
     log(f'{"*" * 8}Close app{"*" * 8}')
