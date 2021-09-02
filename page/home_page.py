@@ -21,7 +21,7 @@ class HomePage(base.Base):
     check_deposit_record =  '//*[contains(@text, "查看存款纪录")]'
 
     # bottom_nav_bar
-    home_page =             '//*[@content-desc="首页"]'
+    homepage =              '//*[@content-desc="首页"]'
     discount =              '//*[@content-desc="优惠"]'
     customer_service =      '//*[@content-desc="客服"]'
     about_us =              '//*[@content-desc="关于我们"]'
@@ -75,7 +75,7 @@ class HomePage(base.Base):
     # bottom_nav_bar
     @allure.step('檢查底部導覽列都存在')
     def check_bottom_navigator_display(self):
-        assert self.find_element(self.home_page) is not None
+        assert self.find_element(self.homepage) is not None
         assert self.find_element(self.discount) is not None
         assert self.find_element(self.customer_service) is not None
         assert self.find_element(self.about_us) is not None
@@ -91,6 +91,9 @@ class HomePage(base.Base):
         else:
             self.find_element(self.account).click()
 
+    @allure.step('進入首頁')
+    def go_to_homepage(self):
+        self.find_element(self.homepage).click()
 
 
 

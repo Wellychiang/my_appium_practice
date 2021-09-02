@@ -83,6 +83,24 @@ class Base:
             attachment_type=AttachmentType.PNG
         )
 
+    def assert_(self, method='equal', item='item', target='target', ):
+        if method == 'equal':
+            if item != target:
+                self.get_screen_shot()
+                raise AssertionError(f'{item} != {target}')
+        elif method == 'not equal':
+            if item == target:
+                self.get_screen_shot()
+                raise AssertionError(f'{item} != {target}')
+        elif method == 'in':
+            if item not in target:
+                self.get_screen_shot()
+                raise AssertionError(f'{item} not in {target}')
+        elif method == 'is not None':
+            if item is None:
+                self.get_screen_shot()
+                raise AssertionError(f'Element: {item}')
+
     @allure.step('使用 android 返回鍵')
     def android_go_back(self):
         self.driver.back()
@@ -100,6 +118,7 @@ class Ims:
         self.paymentInfo =      self.base + 'deposits/setting/paymentInfoTemplate'
         self.deposit_audit =    self.base + 'deposits/search'
         self.player_payments =  self.base + 'playerpayments'
+        self.withdraw_audit =   self.base + 'withdrawals/search'
 
     @allure.step('IMS 登入')
     def ims_login(self):
@@ -107,6 +126,8 @@ class Ims:
 
         username = 'wellytest'
         pwd = 'dc18f76e9b59a3f84eb453cba8c2749d3e6b1eeb'
+        # username = 'wellyadmin'
+        # pwd = '53aaee23e7afbe47aaf922096a8aca7f886356c5'
 
         headers = {
             'Connection': 'keep-alive',
@@ -1012,12 +1033,11 @@ class Ims:
         log(f'Deposit data approve: {r.status_code}')
         return r.status_code
 
-    @allure.step('IMS 查詢玩家銀行卡並刪除')
-    def bankcard(self, playerid, limit=10, delete=False, payment_id=None):
+    @allure.step('IMS 查詢, 刪除, 或新增玩家銀行卡')
+    def bankcard(self, playerid, limit=10, method='get', payment_id=None):
         _, token = self.ims_login()
 
         headers = {
-            # 'content-type': 'application/json;charset=UTF-8',
             'authorization': token['token']
         }
         params = {
@@ -1028,7 +1048,9 @@ class Ims:
             'language': 2
         }
 
-        if delete is True:
+        url = self.player_payments
+
+        if method == 'delete':
             url = self.player_payments + f'/{payment_id}'
             r = self.s.delete(url, headers=headers)
             log(f'Bankcard delete: {r.status_code}')
@@ -1036,14 +1058,115 @@ class Ims:
             if r.status_code != 204:
                 raise ValueError('Delete bankcard failed')
 
-        else:
-            url = self.player_payments
+        elif method == 'get':
             r = self.s.get(url, headers=headers, params=params)
 
             log(f'Bankcard: {r.text}')
             # {'total' 3, 'data': [{'paymentid': 'asodiahwo', 'bankaccount': 111222},
             #                       {'paymentid'}, {}]}
             return r.json()
+        elif method == 'post':
+            # TODO: bankid 加密方式再問, 先別用
+            headers['content-type'] = 'multipart/form-data; boundary=----WebKitFormBoundaryciLEHEpAuAHzquF3'
+
+            r = self.s.post(url, headers=headers, )
+
+    @allure.step('IMS 提款審核搜尋')
+    def withdraw_audit_search(self, playerid):
+        import time
+
+        month = time.strftime('%m')
+        day = time.strftime('%d')
+        todays_start, todays_end = self.start_and_end_time(
+            start_m=month,
+            start_d=day,
+            end_m=month,
+            end_d=day
+        )
+
+        _, token = self.ims_login()
+
+        url = self.withdraw_audit
+        headers = {
+            'authorization': token['token']
+        }
+        params = {
+            'playerid': playerid,
+            'exactmatch': True,
+            'dl': False,
+            'endtime': todays_end,
+            'language': 2,
+            'limit': 25,
+            'offset': 0,
+            'sequence': 0,
+            'sort': 'DESC',
+            'sortcolumn': 'withdrawaltime',
+            'starttime': todays_start,
+            'statusType': 'WITHDRAWAL_AUDIT',
+            'timefilter': 'withdrawaltime',
+        }
+        r = self.s.get(url, headers=headers, params=params)
+        log(r.text)
+        return r.json()
+
+    @allure.step('IMS 解鎖, 刪除, 批准玩家提款審核')
+    def withdraw_datas_action(self, withdraw_id, status='unlock', finance=False):
+        """
+        風控審核被 reject 就不用到財審, 有過就要進財審 unlock > approve
+        """
+
+        _, token = self.ims_login()
+        headers = {
+            'accept': '*/*',
+            'accept-language': 'zh-TW,zh;q=0.9,en-US;q=0.8,en;q=0.7',
+            'authorization': token['token'],
+            'content-type': 'application/json;charset=UTF-8',
+            'origin': 'https://ae-bo.stgdevops.site',
+            'referer': 'https://ae-bo.stgdevops.site/',
+            'sec-fetch-dest': 'empty',
+            'sec-fetch-mode': 'cors',
+            'sec-fetch-site': 'same-site',
+            'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)'
+                          ' Chrome/87.0.4280.88 Safari/537.36'
+        }
+        if status == 'unlock':
+            url = f'{self.base}withdrawals/{withdraw_id}/lock'
+            if finance is False:
+                # 風控審核
+                payload = {'status': 5}
+            else:
+                # 財務審核
+                payload = {'status': 7}
+
+            r = self.s.put(url, headers=headers, json=payload)
+            log(f'Withdraw data unlock: {r.status_code}')
+        elif status == 'reject':
+            url = f'{self.base}withdrawals/{withdraw_id}/reject'
+            payload = {'status': 12, 'declinereason': 'qq', 'ecremarks': 'qq'}
+            r = self.s.put(url, headers=headers, json=payload)
+
+            log(f'Withdraw data reject: {r.status_code}')
+        elif status == 'approve':
+            url = f'{self.base}withdrawals/{withdraw_id}/approve'
+            if finance is False:
+                # 風控審核
+                payload = {'status': 6, 'thirdpartypaymentid': None}
+                r = self.s.put(url, headers=headers, json=payload)
+                log(f'Withdraw data approve risk audit: {r.status_code}')
+            else:
+                # 財務審核
+                payload = {
+                    'status': 8,
+                    'approvereason': '',
+                    'caccountid': '',
+                    'ecremarks': 'qq',
+                    'payoutwalletkey': None,
+                    'thirdpartypaymentid': ''
+                }
+                r = self.s.put(url, headers=headers, json=payload)
+                log(f'Withdraw data approve finance audit: {r.status_code}')
+
+
 
     @allure.step('Get timestamp')
     def start_and_end_time(

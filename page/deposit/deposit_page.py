@@ -167,8 +167,8 @@ class OfflineDeposit(DepositPage):
 
         @allure.step('檢查溫馨提示訊息並點擊確定, 關閉提示視窗')
         def check_popup_warm_hint_and_click_confirm(self):
-            assert self.find_element(self.popup_hint_title).text == '温馨提示'
-            assert '公司账号随时更换! 请每次存款都至入款画面进行操作' in self.find_element(self.popup_hint_message).text
+            self.assert_('equal', self.find_element(self.popup_hint_title).text, '温馨提示')
+            self.assert_('in', '公司账号随时更换! 请每次存款都至入款画面进行操作', self.find_element(self.popup_hint_message).text)
             self.find_element(self.popup_hint_confirm).click()
 
         @allure.step('輸入存款人姓名')
@@ -243,10 +243,10 @@ class OfflineDeposit(DepositPage):
             """
             參數由使用這個方法的一方提供
             """
-            assert int(float(self.find_element(self.amount).text)) == int(amount)
-            assert self.find_element(self.deposit_name).text == deposit_name
-            assert receive_payment_bank in self.find_element(self.receive_payment_bank).text
-            assert self.find_element(self.deposit_bank).text == transfer_out_bank
+            self.assert_('equal', int(float(self.find_element(self.amount).text)), int(amount))
+            self.assert_('equal', self.find_element(self.deposit_name).text, deposit_name)
+            self.assert_('in', receive_payment_bank, self.find_element(self.receive_payment_bank).text)
+            self.assert_('equal', self.find_element(self.deposit_bank).text, transfer_out_bank)
 
             return self.find_element(self.deposit_id).text
 

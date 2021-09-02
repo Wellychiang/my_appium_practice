@@ -12,6 +12,8 @@ class BankcardManagePage(base.Base):
     bank_name =         '//*[@resource-id="com.stage.mpsy.stg:id/txtBankName"]'
     bankcard_status =   '//*[@resource-id="com.stage.mpsy.stg:id/txtTransStatus"]'
 
+    back_btn =          '//*[@resource-id="com.stage.mpsy.stg:id/btnBack"]'
+
     @allure.step('點擊添加銀行卡')
     def click_add_bankcard(self):
         self.find_element(self.bankcard_manage).click()
@@ -29,17 +31,33 @@ class BankcardManagePage(base.Base):
 
     @allure.step('檢查銀行卡賬號')
     def check_bankcard_account(self, bank_account, count=1):
-        assert self.find_element(f'({self.bankcard_account})[{count}]').text == bank_account
+        self.assert_(
+            'equal',
+            self.find_element(f'({self.bankcard_account})[{count}]').text,
+            bank_account
+        )
 
     @allure.step('檢查銀行卡銀行')
     def check_bankcard_bank(self, bank_name, count=1):
-        assert self.find_element(f'({self.bank_name})[{count}]').text == bank_name
+        self.assert_(
+            'equal',
+            self.find_element(f'({self.bank_name})[{count}]').text,
+            bank_name
+        )
 
     @allure.step('檢查銀行卡狀態')
     def check_bankcard_status(self, status, count=1):
-        assert status in self.find_element(f'({self.bankcard_status})[{count}]').text
+        self.assert_(
+            'in',
+            status,
+            self.find_element(f'({self.bankcard_status})[{count}]').text
+        )
 
     @allure.step('點擊銀行卡, 進入我的銀行信息頁面')
     def click_bankcard_to_my_bankcard_page(self, bank_account):
         self.find_element(f'//*[contains(@text, "{bank_account}")]').click()
+
+    @allure.step('點擊返回鍵')
+    def click_back_btn(self):
+        self.find_element(self.back_btn).click()
 

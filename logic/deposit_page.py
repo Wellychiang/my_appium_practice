@@ -12,8 +12,6 @@ import allure
 import pytest
 
 
-
-
 def deposit_revoke_or_audit_pass(
         driver,
         case,
@@ -115,11 +113,8 @@ def personal_account_transfer(
         invalid_amount: tuple
 
 ):
-    ims = Ims()
 
     home_page =             HomePage(driver)
-    deposit_record_page =   DepositRecordPage(driver)
-    deposit_page =          DepositPage(driver)
     deposit_success_page =  DepositSuccessPage(driver)
 
     deposit_page = TransferCheckPage(driver)

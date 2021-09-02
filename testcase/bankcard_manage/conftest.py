@@ -6,22 +6,19 @@ from page.login_page import LoginPage
 from page.home_page import HomePage
 
 
-
-from testcase import ims
-
 import pytest
 import allure
 
 
-@allure.step('初始化充值頁面, 已充值帳號')
-def setup_settings(playerid):
+@allure.step('初始化該帳號銀行卡')
+def api_init_bankcard(playerid):
 
-    log(f'\n{"-"*8}Setup settings{"-"*8}')
+    log(f'\n{"-"*8}Settings{"-"*8}')
 
     ims = Ims()
-    bankcard_datas = ims.bankcard(playerid)
+    bankcard_datas = ims.bankcard(playerid, method='get')
     for data in bankcard_datas['data']:
-        ims.bankcard(playerid, delete=True, payment_id=data['paymentid'])
+        ims.bankcard(playerid, method='delete', payment_id=data['paymentid'])
 
     log(f'\n{"-"*8}Settings done{"-"*8}')
 
@@ -30,7 +27,7 @@ def setup_settings(playerid):
 def driver(request):
     log(f'\n{"-"*8}Start app{"-"*8}')
     param = request.param
-    setup_settings(playerid=param['username'])
+    api_init_bankcard(playerid=param['username'])
     caps = {
         "appActivity": "com.entertainment.mps_yabo.LandingActivity",
         "appPackage": "com.stage.mpsy.stg",
@@ -48,9 +45,7 @@ def driver(request):
         login_page.login(account=param['username'], pwd=param['pwd'])
 
         home_page.ignore_gift_if_it_show_up()
-        # TODO: 每日簽到的 skip
         home_page.ignore_ads_if_ads_show_up()
-        home_page.go_to_account()
 
         yield driver
 
@@ -58,5 +53,8 @@ def driver(request):
         raise ValueError(str(e))
     finally:
         driver.quit()
+
+        api_init_bankcard(playerid=param['username'])
+        log(f'{"-"*8}Close app{"-"*8}')
 
 
